@@ -1,0 +1,44 @@
+/**
+ * OAuth install callback.
+ *
+ * When a merchant approves the app, Ratio redirects the browser to
+ * `GET /oauth/callback?code=...`. This handler exchanges the code for
+ * tokens using the app's client secret.
+ */
+import { Router } from 'express';
+import { exchangeToken, type ExchangeTokenArgs } from '@ratio-app/sdk/oauth';
+
+export const installRouter: Router = Router();
+
+installRouter.get('/oauth/callback', async (req, res) => {
+  const code = req.query['code'];
+  if (typeof code !== 'string' || code === '') {
+    res.status(400).json({ ok: false, error: 'missing_code' });
+    return;
+  }
+
+  const args: ExchangeTokenArgs = {
+    code,
+    clientId: '{{clientId}}',
+    clientSecret: process.env['RATIO_CLIENT_SECRET'] ?? '',
+  };
+
+  try {
+    // exchangeToken returns `unknown` — narrow before reading fields
+    // (e.g. with a type guard or a schema parser).
+    const tokens: unknown = await exchangeToken(args);
+    // TODO(token-storage): persist the tokens keyed by the store (`merchant_id`
+    // in the token response) with the time you saved them; the uninstall webhook
+    // needs both. Also record this `code` as exchanged.
+    void tokens;
+    res.status(200).json({ ok: true });
+  } catch {
+    // A refreshed callback re-sends a code that was already exchanged, so the
+    // exchange fails here. If you recorded this `code` as exchanged, return
+    // success instead of 502. Never use `state` to identify the store: it comes
+    // back unsigned in the redirect.
+    // Never log the raw error object here — it can carry secret material.
+    console.error(JSON.stringify({ msg: 'token exchange failed' }));
+    res.status(502).json({ ok: false, error: 'token_exchange_failed' });
+  }
+});

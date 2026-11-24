@@ -1,0 +1,36 @@
+import { exchangeToken } from '@ratio-app/sdk/oauth';
+import type { Env } from './index.js';
+
+export async function handleInstall(request: Request, env: Env): Promise<Response> {
+  const url = new URL(request.url);
+  const code = url.searchParams.get('code');
+  if (code === null) {
+    return new Response('Missing code', { status: 400 });
+  }
+  try {
+    const tokens: unknown = await exchangeToken({
+      code,
+      clientId: '{{clientId}}',
+      clientSecret: env.RATIO_CLIENT_SECRET,
+    });
+    // TODO(token-storage): persist the tokens keyed by the store (`merchant_id`
+    // in the token response) with the time you saved them; the uninstall webhook
+    // needs both. Also record this `code` as exchanged.
+    void tokens;
+    return new Response(JSON.stringify({ ok: true }), {
+      status: 200,
+      headers: { 'content-type': 'application/json' },
+    });
+  } catch {
+    // A refreshed callback re-sends a code that was already exchanged, so the
+    // exchange fails here. If you recorded this `code` as exchanged, return
+    // success instead of 502. Never use `state` to identify the store: it comes
+    // back unsigned in the redirect.
+    // Never log the raw error object here, it can carry secret material.
+    console.error(JSON.stringify({ msg: 'token exchange failed' }));
+    return new Response(JSON.stringify({ ok: false, error: 'token_exchange_failed' }), {
+      status: 502,
+      headers: { 'content-type': 'application/json' },
+    });
+  }
+}

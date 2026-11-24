@@ -1,0 +1,20 @@
+export interface Env {
+  RATIO_CLIENT_SECRET: string;
+  RATIO_WEBHOOK_SECRET: string;
+}
+
+import { handleInstall } from './install.js';
+import { handleWebhook } from './webhooks.js';
+
+export default {
+  async fetch(request: Request, env: Env, _ctx: ExecutionContext): Promise<Response> {
+    const url = new URL(request.url);
+    if (url.pathname === '/oauth/callback') {
+      return handleInstall(request, env);
+    }
+    if (url.pathname === '/webhooks') {
+      return handleWebhook(request, env);
+    }
+    return new Response('Not found', { status: 404 });
+  },
+} satisfies ExportedHandler<Env>;

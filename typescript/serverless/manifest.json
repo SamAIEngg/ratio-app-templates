@@ -1,0 +1,5 @@
+{
+  "name": "serverless",
+  "description": "Cloudflare Workers Ratio app.",
+  "substitutionKeys": ["appName", "clientId", "sdkVersion", "templateName"]
+}

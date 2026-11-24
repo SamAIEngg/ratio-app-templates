@@ -1,0 +1,5 @@
+{
+  "name": "minimal",
+  "description": "Express-based Ratio app (default).",
+  "substitutionKeys": ["appName", "clientId", "sdkVersion", "templateName"]
+}

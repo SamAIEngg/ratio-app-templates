@@ -1,0 +1,28 @@
+# {{appName}}
+
+Scaffolded from the Ratio `{{templateName}}` template — a Cloudflare
+Workers Ratio app with OAuth install and verified webhooks wired up via
+`@ratio-app/sdk`.
+
+## Getting started
+
+1. Install dependencies: `npm install`.
+2. Create your Ratio app manually in the Ratio developer dashboard and copy the client id.
+3. Open `ratio.config.jsonc` and paste the client id into the `clientId` field (or run `ratio app link` to auto-fill it).
+4. Set your secrets: copy `.dev.vars.example` to `.dev.vars` and fill in `RATIO_CLIENT_SECRET` + `RATIO_WEBHOOK_SECRET` for local `wrangler dev`; for production, run `wrangler secret put RATIO_CLIENT_SECRET` and `wrangler secret put RATIO_WEBHOOK_SECRET`.
+5. Run `npm run dev` (which invokes `ratio app dev`, wrapping `wrangler dev`) to start the Worker locally with the ratio webhook listener, then `npm run deploy` when ready.
+6. Point your merchant test store at your `*.workers.dev` route: `https://<worker>.<subdomain>.workers.dev/oauth/callback` and `https://<worker>.<subdomain>.workers.dev/webhooks`.
+
+## Project layout
+
+- `src/index.ts` — Workers `fetch` handler; routes the install and webhook paths.
+- `src/install.ts` — OAuth install callback (`GET /oauth/callback`); exchanges the authorization code for tokens.
+- `src/webhooks.ts` — webhook receiver (`POST /webhooks`); verifies the HMAC signature over the raw body, then dispatches by topic.
+- `ratio.config.jsonc` — the app manifest committed to this repo.
+- `wrangler.toml` — Workers config; keep `compatibility_flags = ["nodejs_compat"]` (the SDK uses `node:crypto` at runtime).
+
+## Notes
+
+- The webhook handler reads the raw request body with `request.text()` before verification on purpose: signature verification needs the exact payload bytes. Parse JSON only after `verify()` succeeds.
+- Secrets live in Workers secrets (`wrangler secret put ...`), never in committed files.
+- You own the dependency pins in `package.json` — update them as your app evolves.

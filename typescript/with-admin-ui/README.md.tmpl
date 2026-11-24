@@ -1,0 +1,28 @@
+# {{appName}}
+
+Scaffolded from the Ratio `{{templateName}}` template — an Express-based
+Ratio app with OAuth install, verified webhooks, and a Next.js admin UI
+under `src/admin`.
+
+## Getting started
+
+1. Install dependencies: `npm install`.
+2. Create your Ratio app manually in the Ratio developer dashboard and copy the client id.
+3. Open `ratio.config.jsonc` and paste the client id into the `clientId` field (or run `ratio app link` to auto-fill it).
+4. Copy `.env.example` to `.env` and fill in `RATIO_CLIENT_SECRET` and `RATIO_WEBHOOK_SECRET` from the dashboard.
+5. Run `npm run dev` (which invokes `ratio app dev`) to start the API server on port 3000 with the ratio webhook listener; run `npm run admin:dev` in another terminal to start the admin UI on `http://localhost:3001`.
+6. Point your merchant test store at `https://<merchant>.<store>/oauth/callback` and `https://<merchant>.<store>/webhooks` (use a public tunnel such as ngrok or `ratio dev listen` for local testing).
+
+## Project layout
+
+- `src/index.ts` — Express bootstrap; mounts the install and webhook routes.
+- `src/install.ts` — OAuth install callback (`GET /oauth/callback`); exchanges the authorization code for tokens.
+- `src/webhooks.ts` — webhook receiver (`POST /webhooks`); verifies the HMAC signature over the raw body, then dispatches by topic.
+- `src/admin/` — Next.js admin UI (own `tsconfig.json`; excluded from the root build).
+- `ratio.config.jsonc` — the app manifest committed to this repo.
+
+## Notes
+
+- The webhook route uses `express.raw({ type: 'application/json' })` on purpose: signature verification needs the exact raw bytes. Do not add a global JSON body parser in front of it.
+- The admin UI is a starter stub — wire it to your own API routes as your app grows.
+- You own the dependency pins in `package.json` (including `next`) — update them as your app evolves.

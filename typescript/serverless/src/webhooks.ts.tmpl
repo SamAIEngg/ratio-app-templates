@@ -1,0 +1,49 @@
+import { verify } from '@ratio-app/sdk/webhooks';
+import type { Env } from './index.js';
+
+export async function handleWebhook(request: Request, env: Env): Promise<Response> {
+  // MUST read the raw body; do not JSON-parse before verify (SDK requires raw body for HMAC).
+  // The SDK accepts `string | Buffer`; the string path hashes the utf-8 payload bytes.
+  const rawBody = await request.text();
+  const signature = request.headers.get('x-gokwik-signature') ?? '';
+
+  try {
+    verify({
+      rawBody,
+      signature,
+      secret: env.RATIO_WEBHOOK_SECRET,
+    });
+  } catch (err) {
+    // The SDK error carries a stable `code`. Do not log the raw body
+    // or the full error object.
+    const code = (err as { code?: string }).code ?? 'unknown';
+    console.error(JSON.stringify({ msg: 'webhook verification failed', code }));
+    return new Response(JSON.stringify({ ok: false, code }), {
+      status: 400,
+      headers: { 'content-type': 'application/json' },
+    });
+  }
+
+  // Safe to parse now: the signature matched, so `eventType` is signed.
+  // Dispatch on it, never on a header (headers are not covered by the signature).
+  const event = JSON.parse(rawBody) as { eventType?: string };
+  switch (event.eventType) {
+    case 'app/uninstalled':
+      // TODO: delete the tokens stored for this store (body `storeId`).
+      // Deliveries are at-least-once and a retry carries a fresh signature, so a
+      // valid signature does not mean the event is new. If `data.uninstalled_at`
+      // is earlier than when you saved this store's tokens, the merchant has
+      // reinstalled since: ignore the event. Do not use the top-level `timestamp`;
+      // it is when the delivery was prepared.
+      break;
+    default:
+      console.log(
+        JSON.stringify({ msg: 'unhandled webhook topic', topic: event.eventType ?? 'unknown' }),
+      );
+      break;
+  }
+  return new Response(JSON.stringify({ ok: true }), {
+    status: 200,
+    headers: { 'content-type': 'application/json' },
+  });
+}

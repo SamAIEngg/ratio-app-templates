@@ -1,0 +1,37 @@
+{
+  // Canonical Ratio app manifest. Committed to the app repo.
+  // Written by scaffolder; `clientId` filled by `ratio app link`.
+  "$schema": "https://cdn.ratio.win/schema/ratio.config-v1.json",
+  "appName": "{{appName}}",
+  "clientId": "{{clientId}}",
+  "sdkVersion": "{{sdkVersion}}",
+  "template": "{{templateName}}",
+  "description": "",
+  "appVersion": "0.1.0",
+  "devCommand": "wrangler dev",
+  "devServerPort": 3000,
+  "webhooks": {
+    "path": "/webhooks",
+    "topics": []
+  },
+  "oauth": {
+    "redirectPath": "/oauth/callback",
+    // Loopback URLs for `ratio dev install` consent — port range must
+    // stay in lock-step with LOOPBACK_PORTS in src/commands/dev/install.ts.
+    // A drift-guard test in test/locked-invariants-req20260709-d904-02.unit.test.ts
+    // fails if these two lists diverge.
+    "redirectUrls": [
+      "http://127.0.0.1:51820/callback",
+      "http://127.0.0.1:51821/callback",
+      "http://127.0.0.1:51822/callback",
+      "http://127.0.0.1:51823/callback",
+      "http://127.0.0.1:51824/callback",
+      "http://127.0.0.1:51825/callback",
+      "http://127.0.0.1:51826/callback",
+      "http://127.0.0.1:51827/callback",
+      "http://127.0.0.1:51828/callback",
+      "http://127.0.0.1:51829/callback"
+    ],
+    "scopes": []
+  }
+}

@@ -1,0 +1,60 @@
+/**
+ * Webhook receiver.
+ *
+ * Verifies the HMAC signature (X-GoKwik-Signature) over the raw request
+ * bytes, then dispatches on the signed `eventType` field of the body.
+ * Never dispatch on a header: headers are not covered by the signature.
+ */
+import express, { Router } from 'express';
+import { verify, type VerifyInput } from '@ratio-app/sdk/webhooks';
+
+export const webhooksRouter: Router = Router();
+
+webhooksRouter.post(
+  '/webhooks',
+  // Raw body on purpose: the SDK requires the exact raw body bytes for
+  // HMAC verification. Parsing JSON first changes the byte sequence and
+  // the signature will not match.
+  express.raw({ type: 'application/json' }),
+  (req, res) => {
+    const rawBody = req.body as Buffer;
+
+    const input: VerifyInput = {
+      rawBody,
+      signature: String(req.headers['x-gokwik-signature'] ?? ''),
+      secret: process.env['RATIO_WEBHOOK_SECRET'] ?? '',
+    };
+
+    try {
+      verify(input);
+    } catch (err) {
+      // The SDK error carries a stable `code`. Do not log the raw body
+      // or the full error object.
+      const code = (err as { code?: string }).code ?? 'unknown';
+      console.error(JSON.stringify({ msg: 'webhook verification failed', code }));
+      res.status(400).json({ ok: false, code });
+      return;
+    }
+
+    // Safe to parse now: the signature matched, so `eventType` is signed.
+    const event = JSON.parse(rawBody.toString('utf8')) as { eventType?: string };
+
+    switch (event.eventType) {
+      case 'app/uninstalled':
+        // TODO: delete the tokens stored for this store (body `storeId`).
+        // Deliveries are at-least-once and a retry carries a fresh signature, so a
+        // valid signature does not mean the event is new. If `data.uninstalled_at`
+        // is earlier than when you saved this store's tokens, the merchant has
+        // reinstalled since: ignore the event. Do not use the top-level `timestamp`;
+        // it is when the delivery was prepared.
+        break;
+      default:
+        console.log(
+          JSON.stringify({ msg: 'unhandled webhook topic', topic: event.eventType ?? 'unknown' }),
+        );
+        break;
+    }
+
+    res.status(200).json({ ok: true });
+  },
+);

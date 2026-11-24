@@ -1,0 +1,5 @@
+{
+  "name": "with-admin-ui",
+  "description": "Express-based Ratio app with a Next.js admin UI.",
+  "substitutionKeys": ["appName", "clientId", "sdkVersion", "templateName"]
+}

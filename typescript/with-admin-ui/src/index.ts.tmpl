@@ -1,0 +1,26 @@
+/**
+ * {{appName}} — server entry point.
+ *
+ * Mounts the OAuth install callback and the verified webhook receiver.
+ */
+import express from 'express';
+
+import { installRouter } from './install.js';
+import { webhooksRouter } from './webhooks.js';
+
+const app = express();
+
+// Order matters: the webhook route registers its own raw-body parser;
+// keep any global JSON parsing away from it.
+app.use(installRouter);
+app.use(webhooksRouter);
+
+app.get('/', (_req, res) => {
+  res.json({ ok: true, app: '{{appName}}', template: '{{templateName}}' });
+});
+
+const port = Number(process.env['PORT'] ?? 3000);
+
+app.listen(port, () => {
+  console.log(JSON.stringify({ msg: 'server started', app: '{{appName}}', port }));
+});
